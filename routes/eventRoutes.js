@@ -3,7 +3,10 @@ const express = require("express");
 const router = express.Router();
 
 const { ObjectId } = require("mongodb");
-const { getEventsCollection } = require("../config/db");
+const {
+  getEventsCollection,
+  getJoinsCollection,
+} = require("../config/db");
 const verifyToken = require("../middleware/verifyToken");
 
 // Get all upcoming events (Public)
@@ -103,6 +106,74 @@ router.post("/", verifyToken, async (req, res) => {
     });
   }
 });
+
+
+router.post("/:id/join", verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userEmail = req.user.email;
+
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid event ID",
+      });
+    }
+
+    if (!userEmail) {
+      return res.status(401).json({
+        success: false,
+        message: "User email not found",
+      });
+    }
+
+    const event = await getEventsCollection().findOne({
+      _id: new ObjectId(id),
+    });
+
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: "Event not found",
+      });
+    }
+
+    const existingJoin = await getJoinsCollection().findOne({
+      eventId: new ObjectId(id),
+      userEmail: userEmail.toLowerCase().trim(),
+    });
+
+    if (existingJoin) {
+      return res.status(409).json({
+        success: false,
+        message: "You have already joined this event",
+      });
+    }
+
+    const joinData = {
+      eventId: new ObjectId(id),
+      eventTitle: event.title,
+      eventDate: event.eventDate,
+      userEmail: userEmail.toLowerCase().trim(),
+      joinedAt: new Date(),
+    };
+
+    await getJoinsCollection().insertOne(joinData);
+
+    return res.status(201).json({
+      success: true,
+      message: "Successfully joined the event!",
+    });
+  } catch (error) {
+    console.error("Join event error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to join event",
+    });
+  }
+});
+
 
 // Get a single event by ID (Public)
 router.get("/:id", async (req, res) => {
