@@ -2,9 +2,11 @@
 const express = require("express");
 const router = express.Router();
 
+const { ObjectId } = require("mongodb");
 const { getEventsCollection } = require("../config/db");
+const verifyToken = require("../middleware/verifyToken");
 
-// Get all upcoming events
+// Get all upcoming events (Public)
 router.get("/", async (req, res) => {
   try {
     const events = await getEventsCollection()
@@ -27,11 +29,8 @@ router.get("/", async (req, res) => {
   }
 });
 
-
-const { ObjectId } = require("mongodb");
-
-// Create a new event
-router.post("/", async (req, res) => {
+// Create a new event (Protected)
+router.post("/", verifyToken, async (req, res) => {
   try {
     const {
       title,
@@ -40,8 +39,17 @@ router.post("/", async (req, res) => {
       thumbnail,
       location,
       eventDate,
-      creatorEmail,
     } = req.body;
+
+    // Verify authenticated user's email
+    const creatorEmail = req.user.email;
+
+    if (!creatorEmail) {
+      return res.status(401).json({
+        success: false,
+        message: "Authenticated user email not found",
+      });
+    }
 
     // Required field validation
     if (
@@ -50,8 +58,7 @@ router.post("/", async (req, res) => {
       !eventType ||
       !thumbnail ||
       !location ||
-      !eventDate ||
-      !creatorEmail
+      !eventDate
     ) {
       return res.status(400).json({
         success: false,
@@ -97,7 +104,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-// Get a single event by ID
+// Get a single event by ID (Public)
 router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -126,12 +133,12 @@ router.get("/:id", async (req, res) => {
     });
   } catch (error) {
     console.error("Get event details error:", error);
+
     res.status(500).json({
       success: false,
       message: "Failed to fetch event details",
     });
   }
 });
-
 
 module.exports = router;
