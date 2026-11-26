@@ -4,11 +4,13 @@ const cors = require("cors");
 require("dotenv").config();
 
 const { connectDB } = require("./config/db");
-
+const eventRoutes = require("./routes/eventRoutes");
+  
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use("/api/events", eventRoutes);
 
 app.get("/", (req, res) => {
   res.send("Kindora Server is Running!");

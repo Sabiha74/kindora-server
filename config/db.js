@@ -16,9 +16,13 @@ let db;
 const connectDB = async () => {
   try {
     await client.connect();
+
     db = client.db("kindora");
+
     await db.command({ ping: 1 });
+
     console.log("MongoDB connected successfully!");
+
     return db;
   } catch (error) {
     console.error("MongoDB connection failed:", error);
@@ -30,7 +34,17 @@ const getDB = () => {
   if (!db) {
     throw new Error("Database is not connected yet!");
   }
+
   return db;
 };
 
-module.exports = { connectDB, getDB };
+const getEventsCollection = () => getDB().collection("events");
+
+const getJoinsCollection = () => getDB().collection("joins");
+
+module.exports = {
+  connectDB,
+  getDB,
+  getEventsCollection,
+  getJoinsCollection,
+};
